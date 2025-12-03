@@ -1,0 +1,39 @@
+# Ignorer les données sensibles mais pas la structure
+data/uploads/      # Ignorer les images uploadées
+data/*.xlsx        # Ignorer les fichiers Excel (sauf exemple)
+!data/indicateurs_urbains_exemple.xlsx  # Garder un exemple
+
+# Mais garder la structure
+!data/.gitkeep
+!data/uploads/.gitkeep
+!data/uploads/troncons/.gitkeep
+!data/uploads/taudis/.gitkeep
+
+# Environnement
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environnement
+.env
+.env.local
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Système
+.DS_Store
+Thumbs.db
