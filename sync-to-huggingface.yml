@@ -1,0 +1,69 @@
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Permet de déclencher manuellement
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Configure Git
+      run: |
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "GitHub Actions"
+    
+    - name: Clone Hugging Face repository
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: |
+        git clone https://${{ github.actor }}:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/votre-username/urban-ai hf-repo
+    
+    - name: Sync files
+      run: |
+        # Copier tous les fichiers sauf .git
+        rsync -av --delete \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='.gitignore' \
+          ./ hf-repo/
+        
+        # Créer les dossiers nécessaires
+        mkdir -p hf-repo/data/uploads/troncons
+        mkdir -p hf-repo/data/uploads/taudis
+        mkdir -p hf-repo/temp
+        touch hf-repo/data/uploads/troncons/.gitkeep
+        touch hf-repo/data/uploads/taudis/.gitkeep
+        
+        # Vérifier les fichiers essentiels
+        if [ ! -f "hf-repo/app.py" ]; then
+          echo "❌ app.py manquant!"
+          exit 1
+        fi
+        
+        if [ ! -f "hf-repo/requirements.txt" ]; then
+          echo "❌ requirements.txt manquant!"
+          exit 1
+        fi
+    
+    - name: Commit and push to Hugging Face
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: |
+        cd hf-repo
+        git add .
+        
+        # Vérifier s'il y a des changements
+        if git diff --cached --quiet; then
+          echo "Aucun changement détecté"
+        else
+          git commit -m "🚀 Sync from GitHub - ${{ github.sha }}"
+          git push https://${{ github.actor }}:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/votre-username/urban-ai main
+        fi
