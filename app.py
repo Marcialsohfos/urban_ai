@@ -1,8 +1,3 @@
-"""
-Urban AI - Application complète de gestion des données urbaines
-Déploiement Hugging Face Spaces avec structure data/uploads/
-"""
-
 import os
 import secrets
 from flask import Flask, jsonify, request, send_from_directory, render_template, session, redirect, url_for
@@ -14,8 +9,9 @@ import unicodedata
 import hashlib
 import numpy as np
 import math
+from pathlib import Path
 
-# ==================== CONFIGURATION ====================
+# ==================== CONFIGURATION VERCEL ====================
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -27,7 +23,7 @@ app = Flask(__name__,
             static_folder='static',
             template_folder='templates')
 
-# Configuration de sécurité
+# Configuration pour Vercel
 app.config.update(
     SECRET_KEY=os.environ.get('SECRET_KEY', secrets.token_hex(32)),
     PASSWORD_HASH=os.environ.get('PASSWORD_HASH', 
@@ -39,28 +35,28 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=3600,
 )
 
-CORS(app, resources={
-    r"/api/*": {"origins": "*"},
-    r"/static/*": {"origins": "*"}
-})
+CORS(app)
 
-# ==================== CHEMINS ====================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-EXCEL_PATH = os.path.join(DATA_DIR, 'indicateurs_urbains.xlsx')
-UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# ==================== CHEMINS VERCEL ====================
+BASE_DIR = Path(__file__).parent.absolute()
+
+# Utilisation de /tmp pour les uploads sur Vercel (seul dossier accessible en écriture)
+if os.environ.get('VERCEL'):
+    DATA_DIR = Path('/tmp/data')
+    UPLOAD_FOLDER = Path('/tmp/data/uploads')
+else:
+    DATA_DIR = BASE_DIR / 'data'
+    UPLOAD_FOLDER = BASE_DIR / 'data' / 'uploads'
+
+EXCEL_PATH = DATA_DIR / 'indicateurs_urbains.xlsx'
+app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
 
 # Création des dossiers
-os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_FOLDER, 'troncons'), exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_FOLDER, 'taudis'), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, 'temp'), exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+(UPLOAD_FOLDER / 'troncons').mkdir(exist_ok=True)
+(UPLOAD_FOLDER / 'taudis').mkdir(exist_ok=True)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # ==================== AUTHENTIFICATION ====================
 def check_password(password):
